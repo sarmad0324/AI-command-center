@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sarmad-company-os.openai.site'),
+  metadataBase: new URL('https://sarmad-company-os.sarmadirfan78.chatgpt.site'),
   title: 'Sarmad OS · Founder Command Center',
   description: 'A private AI sales command center for Sarmad Irfan.',
   openGraph: {
