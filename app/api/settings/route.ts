@@ -34,7 +34,7 @@ export async function PUT(request: Request) {
     .split(',')
     .map((part) => boundedInteger(part.trim(), 0, 1, 60))
     .filter(Boolean)
-    .slice(0, 4)
+    .slice(0, 7)
     .join(',') || current.followup_days;
   const updatedAt = new Date().toISOString();
 
