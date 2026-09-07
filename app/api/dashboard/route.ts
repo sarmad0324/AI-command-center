@@ -44,6 +44,19 @@ export async function GET() {
     `).first(),
   ]);
 
+  const now = Date.now();
+  const liveConnections = connections.results.map((row) => {
+    const connection = row as Record<string, unknown>;
+    if (connection.id !== 'ai-executor') return connection;
+    const checkedAt = Date.parse(String(connection.checked_at ?? ''));
+    if (Number.isFinite(checkedAt) && now - checkedAt <= 180_000) return connection;
+    return {
+      ...connection,
+      status: 'offline',
+      detail: 'The AI execution heartbeat has not checked in during the last three minutes. Approved work will remain safely queued until it reconnects.',
+    };
+  });
+
   return Response.json({
     generatedAt: new Date().toISOString(),
     metrics: totals,
@@ -51,7 +64,7 @@ export async function GET() {
     queue,
     settings,
     setupMissing: settings ? missingActivationRules(settings) : [],
-    connections: connections.results,
+    connections: liveConnections,
     runs: runs.results,
     leads: leads.results,
     applications: applications.results,

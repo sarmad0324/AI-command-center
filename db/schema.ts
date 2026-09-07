@@ -3,7 +3,7 @@ export const schemaStatements = [
     id INTEGER PRIMARY KEY CHECK (id = 1),
     automation_mode TEXT NOT NULL DEFAULT 'paused',
     timezone TEXT NOT NULL DEFAULT 'Asia/Karachi',
-    schedule_hour INTEGER NOT NULL DEFAULT 21,
+    schedule_hour INTEGER NOT NULL DEFAULT 9,
     lead_target INTEGER NOT NULL DEFAULT 10,
     email_cap INTEGER NOT NULL DEFAULT 10,
     application_cap INTEGER NOT NULL DEFAULT 5,
@@ -187,6 +187,15 @@ export const defaultApprovalItems = [
 ];
 
 export const defaultConnections = [
+  {
+    id: 'ai-executor',
+    name: 'AI Executor',
+    channel: 'Queue processing and reply monitoring',
+    status: 'connected',
+    identity: 'Sarmad Company OS · scheduled worker',
+    detail: 'The worker is checking for dashboard requests, approvals, connection failures, and replies.',
+    actionUrl: 'https://sarmad-company-os.sarmadirfan78.chatgpt.site/',
+  },
   {
     id: 'gmail',
     name: 'Gmail',

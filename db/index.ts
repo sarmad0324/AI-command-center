@@ -83,7 +83,7 @@ export async function ensureDatabase() {
         const policyUpdates = [
           db.prepare(`UPDATE control_settings SET
             automation_mode = 'scheduled', approval_policy = 'review_first', timezone = 'Asia/Karachi',
-            schedule_hour = 21, lead_target = 10, email_cap = 10, application_cap = 5,
+            schedule_hour = 9, lead_target = 10, email_cap = 10, application_cap = 5,
             application_facts = ?, updated_at = ? WHERE id = 1`).bind(applicationFacts, updatedAt),
           ...defaultApprovalItems.map((item) => db.prepare(`UPDATE approval_items SET
             target = ?, payload_preview = ?, source_url = ?, readiness = ?, blocker = ?
@@ -99,7 +99,7 @@ export async function ensureDatabase() {
             (id, run_id, event_type, label, detail, occurred_at)
             VALUES (?, NULL, 'policy_updated', 'Review-first daily preparation confirmed', ?, ?)`).bind(
               verifiedProfileUpdateId,
-              'Daily 9:00 PM preparation queues 10 verified-email leads and 5 truthful Wellfound applications. Unapproved batches remain queued and accumulate; external actions require owner approval.',
+              'Daily 9:00 AM preparation queues 10 verified-email leads and 5 truthful Wellfound applications. Unapproved batches remain queued and accumulate; external actions require owner approval.',
               updatedAt,
             ),
         ];

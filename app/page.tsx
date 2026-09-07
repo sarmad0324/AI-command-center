@@ -71,7 +71,7 @@ export default function Home() {
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
-    const interval = window.setInterval(() => void refresh(true), 15000);
+    const interval = window.setInterval(() => void refresh(true), 5000);
     return () => { window.clearTimeout(initial); window.clearInterval(interval); };
   }, [refresh]);
 
@@ -85,7 +85,7 @@ export default function Home() {
         const detail = payload.missing?.length ? ` Complete: ${payload.missing.join(', ')}.` : '';
         throw new Error(`${payload.error ?? 'The request needs attention.'}${detail}`);
       }
-      setNotice(runType === 'connection_check' ? 'Connection check queued.' : 'Sales run queued for the AI worker.');
+      setNotice(runType === 'connection_check' ? 'Connection check queued.' : 'Sales run queued. The AI executor will start it automatically.');
       setView('Runs'); await refresh(true);
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : 'The request could not be queued.');
@@ -105,7 +105,7 @@ export default function Home() {
       let payload: { error?: string; emailCount?: number; applicationCount?: number } = {};
       try { payload = raw ? JSON.parse(raw) as typeof payload : {}; } catch { payload = {}; }
       if (!response.ok) throw new Error(payload.error ?? 'The approval could not be recorded.');
-      setNotice(`${payload.emailCount ?? 0} email(s) and ${payload.applicationCount ?? 0} application(s) approved and queued.`);
+      setNotice(`${payload.emailCount ?? 0} email(s) and ${payload.applicationCount ?? 0} application(s) approved. The executor will send and submit them automatically.`);
       setApprovalIntent(null); setView('Runs'); await refresh(true);
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : 'The approval could not be recorded.');
@@ -114,7 +114,9 @@ export default function Home() {
 
   function navigate(next: View) { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   const activeCount = number(data?.queue?.queued) + number(data?.queue?.running);
-  const ready = Boolean(data && data.setupMissing.length === 0);
+  const policyReady = Boolean(data && data.setupMissing.length === 0);
+  const executorOnline = data?.connections.find((item) => item.id === 'ai-executor')?.status === 'connected';
+  const ready = policyReady && executorOnline;
 
   return (
     <main className="app-shell">
@@ -137,7 +139,7 @@ export default function Home() {
           {error ? <div className="alert error"><strong>Live data unavailable</strong><span>{error}</span><button onClick={() => void refresh()} type="button">Retry</button></div> : null}
           {notice ? <div className="alert notice"><span>{notice}</span><button onClick={() => setNotice('')} type="button">Dismiss</button></div> : null}
           {!data ? <LoadingState /> : null}
-          {data && view === 'Today' ? <TodayView data={data} onConfigure={() => navigate('Settings')} onApprovals={() => navigate('Approvals')} onRun={() => void queueRun()} busy={busy} /> : null}
+          {data && view === 'Today' ? <TodayView data={data} onConfigure={() => navigate('Settings')} onConnections={() => navigate('Connections')} onApprovals={() => navigate('Approvals')} onRun={() => void queueRun()} busy={busy} /> : null}
           {data && view === 'Approvals' ? <ApprovalsView data={data} busy={busy} onApprove={setApprovalIntent} /> : null}
           {data && view === 'Sales' ? <SalesView leads={data.leads} /> : null}
           {data && view === 'Applications' ? <ApplicationsView applications={data.applications} /> : null}
@@ -152,13 +154,16 @@ export default function Home() {
   );
 }
 
-function TodayView({ data, onConfigure, onApprovals, onRun, busy }: { data: DashboardData; onConfigure: () => void; onApprovals: () => void; onRun: () => void; busy: boolean }) {
-  const ready = data.setupMissing.length === 0; const latestRun = data.runs[0];
+function TodayView({ data, onConfigure, onConnections, onApprovals, onRun, busy }: { data: DashboardData; onConfigure: () => void; onConnections: () => void; onApprovals: () => void; onRun: () => void; busy: boolean }) {
+  const policyReady = data.setupMissing.length === 0;
+  const executorOnline = data.connections.find((item) => item.id === 'ai-executor')?.status === 'connected';
+  const ready = policyReady && executorOnline;
+  const latestRun = data.runs[0];
   return <>
-    <section className={`setup-banner ${ready ? 'connected' : ''}`} aria-label="Activation status"><div className="critical-icon">{ready ? '✓' : '!'}</div><div className="critical-copy"><span>{ready ? 'Control plane ready' : 'Activation rules incomplete'}</span><strong>{ready ? `${number(data.approvalMetrics.pending)} items are waiting for your decision.` : `${data.setupMissing.length} operating rule${data.setupMissing.length === 1 ? '' : 's'} still need your input.`}</strong><p>{ready ? `${number(data.approvalMetrics.ready)} can execute now; ${number(data.approvalMetrics.blocked)} are held until missing contact or application facts are verified.` : `Missing: ${data.setupMissing.join(', ')}.`}</p></div><button className="secondary-button" onClick={ready ? onApprovals : onConfigure} disabled={busy} type="button">{ready ? 'Review approvals' : 'Complete settings'}</button></section>
+    <section className={`setup-banner ${ready ? 'connected' : ''}`} aria-label="Activation status"><div className="critical-icon">{ready ? '✓' : '!'}</div><div className="critical-copy"><span>{ready ? 'Control plane ready' : policyReady ? 'AI executor offline' : 'Activation rules incomplete'}</span><strong>{ready ? `${number(data.approvalMetrics.pending)} items are waiting for your decision.` : policyReady ? 'Approved and manual requests will remain safely queued.' : `${data.setupMissing.length} operating rule${data.setupMissing.length === 1 ? '' : 's'} still need your input.`}</strong><p>{ready ? `${number(data.approvalMetrics.ready)} can execute now; ${number(data.approvalMetrics.blocked)} are held until missing contact or application facts are verified.` : policyReady ? 'Open Connections for the last worker check-in and reconnect guidance.' : `Missing: ${data.setupMissing.join(', ')}.`}</p></div><button className="secondary-button" onClick={ready ? onApprovals : policyReady ? onConnections : onConfigure} disabled={busy} type="button">{ready ? 'Review approvals' : policyReady ? 'Check connections' : 'Complete settings'}</button></section>
     <section className="metrics four" aria-label="All-time automation snapshot"><Metric label="Live leads" value={number(data.metrics.leads)} note={`${number(data.week.leads)} this week`} /><Metric label="Emails + follow-ups" value={number(data.metrics.emails)} note={`${number(data.week.emails)} this week`} /><Metric label="Applications" value={number(data.metrics.applications)} note={`${number(data.week.applications)} this week`} /><Metric label="Replies needing you" value={number(data.metrics.replies)} note={`${number(data.week.replies)} received this week`} /></section>
     <div className="main-grid live-grid"><section className="panel run-control"><PanelHeading eyebrow="AI sales cycle" title="One request, one auditable run" note={ready ? 'Policy ready' : 'Waiting for your filters'} /><div className="run-flow">{['Discover 5–10 leads', 'Qualify and deduplicate', 'Update CRM + Sheet', 'Send within cap', 'Run due follow-ups', 'Apply to matched jobs', 'Stop and notify on reply'].map((step, index) => <div key={step}><b>{index + 1}</b><span>{step}</span></div>)}</div><div className="run-actions"><button className="primary-button" disabled={busy} onClick={onRun} type="button"><span>▶</span>{busy ? 'Queuing…' : 'Run My Sales Lead'}</button><span>Every request is persisted before any external action begins.</span></div></section><section className="panel status-panel"><PanelHeading eyebrow="Latest request" title={latestRun ? humanStatus(latestRun.status) : 'No run yet'} note={latestRun ? formatDate(latestRun.requested_at) : 'Live records only'} />{latestRun ? <RunSummary run={latestRun} /> : <EmptyMini icon="▶" title="Your run history is empty" text="Complete the policy, then use the run button to create the first real request." />}</section></div>
-    <section className="panel activity-panel"><PanelHeading eyebrow="System activity" title="Recent events" note="Refreshes every 15 seconds" />{data.activity.length ? <div className="activity-list">{data.activity.map((item) => <div key={item.id}><span className={`event-dot ${item.event_type}`} /><div><strong>{item.label}</strong><p>{item.detail}</p></div><time>{relativeTime(item.occurred_at)}</time></div>)}</div> : <EmptyMini icon="·" title="No activity yet" text="Run requests, connector checks, sends, applications, and replies will appear here." />}</section>
+    <section className="panel activity-panel"><PanelHeading eyebrow="System activity" title="Recent events" note="Refreshes every 5 seconds" />{data.activity.length ? <div className="activity-list">{data.activity.map((item) => <div key={item.id}><span className={`event-dot ${item.event_type}`} /><div><strong>{item.label}</strong><p>{item.detail}</p></div><time>{relativeTime(item.occurred_at)}</time></div>)}</div> : <EmptyMini icon="·" title="No activity yet" text="Run requests, connector checks, sends, applications, and replies will appear here." />}</section>
   </>;
 }
 
