@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
   let repliesAdded = 0;
+  let bouncesAdded = 0;
 
   const connections = Array.isArray(body.connections) ? body.connections.slice(0, 20) as Input[] : [];
   const reportedConnections: Input[] = [
@@ -85,6 +86,31 @@ export async function POST(request: Request) {
     repliesAdded += 1;
   }
 
+  const bounces = Array.isArray(body.bounces) ? body.bounces.slice(0, 100) as Input[] : [];
+  for (const bounce of bounces) {
+    const leadId = text(bounce.leadId, 100);
+    const email = text(bounce.email, 320).toLowerCase();
+    if (!leadId && !email) continue;
+    const reason = text(bounce.reason, 1000) || 'The recipient address rejected delivery.';
+    if (leadId) {
+      statements.push(db.prepare(`UPDATE leads SET status = 'bounced', next_followup_at = NULL WHERE id = ?`).bind(leadId));
+      statements.push(db.prepare(`UPDATE approval_items SET status = 'blocked', readiness = 'blocked', blocker = ?
+        WHERE related_id = ? AND status = 'pending'`).bind(reason, leadId));
+    } else {
+      statements.push(db.prepare(`UPDATE leads SET status = 'bounced', next_followup_at = NULL WHERE LOWER(email) = ?`).bind(email));
+      statements.push(db.prepare(`UPDATE approval_items SET status = 'blocked', readiness = 'blocked', blocker = ?
+        WHERE LOWER(target) = ? AND status = 'pending'`).bind(reason, email));
+    }
+    statements.push(db.prepare(`INSERT OR IGNORE INTO activity_events
+      (id, run_id, event_type, label, detail, occurred_at)
+      VALUES (?, NULL, 'bounce', 'Email delivery failed', ?, ?)`).bind(
+        text(bounce.id, 100) || crypto.randomUUID(),
+        `${email || leadId}: ${reason}`,
+        text(bounce.receivedAt, 80) || now,
+      ));
+    bouncesAdded += 1;
+  }
+
   await db.batch(statements);
-  return Response.json({ ok: true, connectionsChecked: reportedConnections.length, repliesAdded });
+  return Response.json({ ok: true, connectionsChecked: reportedConnections.length, repliesAdded, bouncesAdded });
 }
