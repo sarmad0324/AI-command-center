@@ -73,6 +73,38 @@ export async function ensureDatabase() {
           '2026-09-01T09:15:00.000Z',
         ).run();
       }
+
+      const verifiedProfileUpdateId = 'policy-update-20260907-review-first';
+      const verifiedProfileUpdate = await db.prepare('SELECT id FROM activity_events WHERE id = ?')
+        .bind(verifiedProfileUpdateId).first();
+      if (!verifiedProfileUpdate) {
+        const updatedAt = new Date().toISOString();
+        const applicationFacts = 'Sarmad Irfan; Lahore, Pakistan; remote and international; Technical Partner / Product Engineer; 5+ years of software engineering experience, work authorization, Node.js experience, and WebGL experience confirmed directly by Sarmad on 2026-09-07; React, Next.js, TypeScript, React Native, Expo, Express, PostgreSQL, Supabase, Firebase, Docker, GitHub, CI/CD, cloud deployment, APIs, authentication, RBAC, and system architecture; GitHub https://github.com/sarmad0324; website https://www.sarmadirfan.com/; more than two years of end-to-end technical ownership on TruckWise. Work-authorization country/region, compensation expectations, exact availability, degree completion, and any other unverified answer must not be invented.';
+        const policyUpdates = [
+          db.prepare(`UPDATE control_settings SET
+            automation_mode = 'scheduled', approval_policy = 'review_first', timezone = 'Asia/Karachi',
+            schedule_hour = 21, lead_target = 10, email_cap = 10, application_cap = 5,
+            application_facts = ?, updated_at = ? WHERE id = 1`).bind(applicationFacts, updatedAt),
+          ...defaultApprovalItems.map((item) => db.prepare(`UPDATE approval_items SET
+            target = ?, payload_preview = ?, source_url = ?, readiness = ?, blocker = ?
+            WHERE id = ? AND status = 'pending'`).bind(
+              item.target || null,
+              item.preview,
+              'sourceUrl' in item ? item.sourceUrl : null,
+              item.readiness,
+              item.blocker || null,
+              item.id,
+            )),
+          db.prepare(`INSERT OR IGNORE INTO activity_events
+            (id, run_id, event_type, label, detail, occurred_at)
+            VALUES (?, NULL, 'policy_updated', 'Review-first daily preparation confirmed', ?, ?)`).bind(
+              verifiedProfileUpdateId,
+              'Daily 9:00 PM preparation queues 10 verified-email leads and 5 truthful Wellfound applications. Unapproved batches remain queued and accumulate; external actions require owner approval.',
+              updatedAt,
+            ),
+        ];
+        await db.batch(policyUpdates);
+      }
       await db.prepare('PRAGMA optimize').run();
     })().catch((error) => {
       initialization = null;

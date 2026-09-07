@@ -27,9 +27,7 @@ export async function PUT(request: Request) {
   const mode = ['paused', 'manual', 'scheduled'].includes(String(body.automation_mode))
     ? String(body.automation_mode)
     : current.automation_mode;
-  const approvalPolicy = ['review_first', 'automatic'].includes(String(body.approval_policy))
-    ? String(body.approval_policy)
-    : current.approval_policy;
+  const approvalPolicy = 'review_first';
   const values: Record<string, string> = {};
   for (const field of textFields) {
     values[field] = String(body[field] ?? current[field]).trim().slice(0, 4000);

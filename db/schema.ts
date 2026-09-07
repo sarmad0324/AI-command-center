@@ -14,7 +14,7 @@ export const schemaStatements = [
     wellfound_roles TEXT NOT NULL DEFAULT 'Technical Co-Founder, Co-Founder, Founding Engineer, CTO, Senior Software Engineer, Senior Full-Stack Engineer, Full-Stack Engineer, Backend Engineer, Frontend Engineer, Product Engineer, Software Engineer, Data Scientist',
     wellfound_locations TEXT NOT NULL DEFAULT 'Remote only; use the existing saved Wellfound region set shown as Japan +10; company size 1-10 or 11-50; any salary; any equity; no investment-stage restriction',
     min_compensation TEXT NOT NULL DEFAULT '',
-    application_facts TEXT NOT NULL DEFAULT 'Sarmad Irfan; Lahore, Pakistan; remote and international; Technical Partner / Product Engineer; final-year university student; React, Next.js, TypeScript, React Native, Expo, Node.js, Express, PostgreSQL, Supabase, Firebase, Docker, GitHub, CI/CD, cloud deployment, APIs, authentication, RBAC, and system architecture; website https://www.sarmadirfan.com/; more than two years of technical ownership on TruckWise. Do not invent years beyond that evidence, compensation expectations, availability, work authorization, degree completion, or any answer not explicitly verified.',
+    application_facts TEXT NOT NULL DEFAULT 'Sarmad Irfan; Lahore, Pakistan; remote and international; Technical Partner / Product Engineer; 5+ years of software engineering experience, work authorization, Node.js experience, and WebGL experience confirmed directly by Sarmad on 2026-09-07; React, Next.js, TypeScript, React Native, Expo, Express, PostgreSQL, Supabase, Firebase, Docker, GitHub, CI/CD, cloud deployment, APIs, authentication, RBAC, and system architecture; GitHub https://github.com/sarmad0324; website https://www.sarmadirfan.com/; more than two years of end-to-end technical ownership on TruckWise. Work-authorization country/region, compensation expectations, exact availability, degree completion, and any other unverified answer must not be invented.',
     approval_policy TEXT NOT NULL DEFAULT 'review_first',
     notify_by_email INTEGER NOT NULL DEFAULT 1,
     notification_email TEXT NOT NULL DEFAULT 'sarmad@sarmadirfan.com',
@@ -128,13 +128,13 @@ export const defaultApprovalItems = [
     preview: 'Personalized founder email about taking Telmi from a working prototype and pilot schools to a stable Next.js/Supabase production product. Includes Sarmad’s relevant product-ownership experience, a low-friction technical-risk review offer, and a simple opt-out.',
   },
   {
-    id: 'approval-email-20260901-002', itemType: 'email', relatedId: 'lead-20260901-002', company: 'Aistetic', contactName: 'Duncan McKay', target: '',
-    subject: 'React Native ownership for ListingFlow', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-002', itemType: 'email', relatedId: 'lead-20260901-002', company: 'Aistetic', contactName: 'Duncan McKay', target: 'duncan@aistetic.com',
+    subject: 'React Native ownership for ListingFlow', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email about Aistetic’s self-serve ListingFlow journey and React Native mobile build, positioning Sarmad for a low-risk first milestone.',
   },
   {
     id: 'approval-email-20260901-003', itemType: 'email', relatedId: 'lead-20260901-003', company: 'Lamina', contactName: 'Deep Banerjee', target: 'deep.banerjee@getmason.io',
-    subject: 'Product engineering for Lamina’s canvas', readiness: 'blocked', blocker: 'The public recruitment address must be verified as current before sending.',
+    subject: 'Product engineering for Lamina’s canvas', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email about Lamina’s collaborative canvas, asynchronous generation jobs, integrations, and architecture/delivery risk.',
   },
   {
@@ -143,8 +143,8 @@ export const defaultApprovalItems = [
     preview: 'Personalized founder email focused on Bubble-to-React/Node/PostgreSQL migration risks and a concise migration checklist.',
   },
   {
-    id: 'approval-email-20260901-005', itemType: 'email', relatedId: 'lead-20260901-005', company: 'Coda', contactName: 'Yuvika Diwan', target: '',
-    subject: 'Technical ownership for Coda’s founding build', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-005', itemType: 'email', relatedId: 'lead-20260901-005', company: 'Coda', contactName: 'Yuvika Diwan', target: 'careers@coda-engine.ai',
+    subject: 'Technical ownership for Coda’s founding build', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email connecting Coda’s physical-mobility reliability needs with Sarmad’s logistics product ownership.',
   },
   {
@@ -153,23 +153,23 @@ export const defaultApprovalItems = [
     preview: 'Personalized founder email offering hands-on product ownership across React/Next.js, mobile, APIs, payments, launches, and stabilization. Includes a simple opt-out.',
   },
   {
-    id: 'approval-email-20260901-007', itemType: 'email', relatedId: 'lead-20260901-007', company: 'iGrow', contactName: 'Pallavi Bhatt', target: '',
-    subject: 'Technical ownership before iGrow’s next raise', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-007', itemType: 'email', relatedId: 'lead-20260901-007', company: 'iGrow', contactName: 'Pallavi Bhatt', target: 'teams@i-grow.co',
+    subject: 'Technical ownership before iGrow’s next raise', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email offering a compact technical-readiness framework for iGrow’s architecture and fundraising conversations.',
   },
   {
-    id: 'approval-email-20260901-008', itemType: 'email', relatedId: 'lead-20260901-008', company: 'Floom', contactName: 'Federico De Ponte', target: '',
-    subject: 'From single Docker to managed cloud', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-008', itemType: 'email', relatedId: 'lead-20260901-008', company: 'Floom', contactName: 'Federico De Ponte', target: 'hello@fedeponte.com',
+    subject: 'From single Docker to managed cloud', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email about tenant isolation, deployment reliability, authentication, observability, CLI/SDK, and a managed-cloud transition.',
   },
   {
-    id: 'approval-email-20260901-009', itemType: 'email', relatedId: 'lead-20260901-009', company: 'Class8', contactName: 'Chris Atkinson', target: '',
-    subject: 'AI-first product delivery for trucking fleets', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-009', itemType: 'email', relatedId: 'lead-20260901-009', company: 'Class8', contactName: 'Chris Atkinson', target: 'chris@class8.com',
+    subject: 'AI-first product delivery for trucking fleets', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email connecting Class8’s trucking platform to Sarmad’s long-term logistics engineering and AI workflow experience.',
   },
   {
-    id: 'approval-email-20260901-010', itemType: 'email', relatedId: 'lead-20260901-010', company: 'Mura', contactName: 'Ryan G. Smith', target: '',
-    subject: 'Founding product engineering for Mura', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    id: 'approval-email-20260901-010', itemType: 'email', relatedId: 'lead-20260901-010', company: 'Mura', contactName: 'Ryan G. Smith', target: 'ryan@mura.co',
+    subject: 'Founding product engineering for Mura', readiness: 'ready', blocker: '',
     preview: 'Personalized founder email about reliable AI billing automation, operational workflows, systems design, and founding-level product decisions.',
   },
   ...[
@@ -178,11 +178,11 @@ export const defaultApprovalItems = [
     ['003', 'Lamina', 'Frontend Software Engineer — Remote (global)', 'https://wellfound.com/jobs/4589345-frontend-software-engineer-remote-global-full-time-2-5-years', 'Work authorization, availability, exact experience, and any node-editor/WebGL answer must be confirmed.'],
     ['004', 'Bespoke', 'Full Stack Product Engineer', 'https://wellfound.com/jobs/4461854-full-stack-product-engineer', 'Eastern Time availability, work authorization, exact experience, and compensation expectations must be confirmed.'],
     ['005', 'Lesto Labs', 'Senior Full-Stack Product Engineer — React Native, Node.js, Next.js', 'https://wellfound.com/jobs/4546260-senior-full-stack-product-engineer-react-native-node-js-next-js', 'A public work sample, exact experience, availability, work authorization, and compensation expectations must be confirmed.'],
-  ].map(([suffix, company, role, sourceUrl, blocker]) => ({
+  ].map(([suffix, company, role, sourceUrl]) => ({
     id: `approval-application-20260901-${suffix}`,
     itemType: 'application', relatedId: `app-20260901-${suffix}`, company, contactName: '', target: 'Wellfound',
-    subject: role, sourceUrl, readiness: 'blocked', blocker,
-    preview: `Truthful personalized Wellfound application for ${company}. The prepared cover note is available in the Live Register; submission remains blocked until every required applicant fact is confirmed.`,
+    subject: role, sourceUrl, readiness: 'ready', blocker: '',
+    preview: `Truthful personalized Wellfound application for ${company}, using Sarmad’s confirmed 5+ years, work authorization, Node.js/WebGL experience where relevant, GitHub profile, portfolio, and TruckWise ownership example. The worker must pause this item if the live form introduces a required fact that is not in the verified profile.`,
   })),
 ];
 
