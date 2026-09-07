@@ -10,6 +10,7 @@ const textFields = [
   'wellfound_locations',
   'min_compensation',
   'application_facts',
+  'notification_email',
 ] as const;
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number) {
@@ -26,6 +27,9 @@ export async function PUT(request: Request) {
   const mode = ['paused', 'manual', 'scheduled'].includes(String(body.automation_mode))
     ? String(body.automation_mode)
     : current.automation_mode;
+  const approvalPolicy = ['review_first', 'automatic'].includes(String(body.approval_policy))
+    ? String(body.approval_policy)
+    : current.approval_policy;
   const values: Record<string, string> = {};
   for (const field of textFields) {
     values[field] = String(body[field] ?? current[field]).trim().slice(0, 4000);
@@ -42,6 +46,7 @@ export async function PUT(request: Request) {
     automation_mode = ?, timezone = ?, schedule_hour = ?, lead_target = ?, email_cap = ?, application_cap = ?,
     followup_days = ?, target_markets = ?, ideal_customer_profile = ?, lead_titles = ?, wellfound_roles = ?,
     wellfound_locations = ?, min_compensation = ?, application_facts = ?, updated_at = ?
+    , approval_policy = ?, notify_by_email = ?, notification_email = ?
     WHERE id = 1
   `).bind(
     mode,
@@ -59,6 +64,9 @@ export async function PUT(request: Request) {
     values.min_compensation,
     values.application_facts,
     updatedAt,
+    approvalPolicy,
+    body.notify_by_email === false || body.notify_by_email === 0 ? 0 : 1,
+    values.notification_email || 'sarmad@sarmadirfan.com',
   ).run();
 
   const settings = await getSettings();

@@ -8,13 +8,22 @@ export async function GET() {
   const weekStart = mondayStartIso();
   const settings = await getSettings();
 
-  const [connections, runs, leads, applications, replies, activity, totals, week, queue] = await Promise.all([
+  const [connections, runs, leads, applications, replies, activity, approvals, approvalMetrics, totals, week, queue] = await Promise.all([
     db.prepare('SELECT * FROM connection_status ORDER BY name').all(),
     db.prepare('SELECT * FROM automation_runs ORDER BY requested_at DESC LIMIT 12').all(),
     db.prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT 50').all(),
     db.prepare('SELECT * FROM applications ORDER BY created_at DESC LIMIT 50').all(),
     db.prepare('SELECT * FROM replies ORDER BY received_at DESC LIMIT 50').all(),
     db.prepare('SELECT * FROM activity_events ORDER BY occurred_at DESC LIMIT 16').all(),
+    db.prepare(`SELECT * FROM approval_items
+      WHERE status IN ('pending', 'approved', 'queued', 'blocked')
+      ORDER BY CASE item_type WHEN 'email' THEN 0 ELSE 1 END, created_at, company`).all(),
+    db.prepare(`SELECT
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status = 'pending' AND readiness = 'ready' THEN 1 ELSE 0 END) AS ready,
+      SUM(CASE WHEN status = 'pending' AND readiness != 'ready' THEN 1 ELSE 0 END) AS blocked,
+      SUM(CASE WHEN status IN ('approved', 'queued') THEN 1 ELSE 0 END) AS authorized
+      FROM approval_items`).first(),
     db.prepare(`SELECT
       (SELECT COUNT(*) FROM leads) AS leads,
       (SELECT COALESCE(SUM(emails_sent + followups_sent), 0) FROM automation_runs) AS emails,
@@ -48,6 +57,8 @@ export async function GET() {
     applications: applications.results,
     replies: replies.results,
     activity: activity.results,
+    approvals: approvals.results,
+    approvalMetrics,
     sheetUrl: 'https://docs.google.com/spreadsheets/d/1k5jx9vr5rTk0c1Ly0K-bB40zmV9dH3pPKnAoqr-KA7M/edit',
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

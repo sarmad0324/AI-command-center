@@ -45,6 +45,9 @@ export async function POST(request: Request) {
     ),
   ];
 
+  statements.push(db.prepare(`UPDATE approval_items SET status = ?
+    WHERE run_id = ? AND status = 'approved'`).bind(status === 'completed' ? 'completed' : 'blocked', runId));
+
   const leads = Array.isArray(body.leads) ? body.leads.slice(0, 100) as RecordInput[] : [];
   for (const lead of leads) {
     statements.push(db.prepare(`INSERT OR REPLACE INTO leads

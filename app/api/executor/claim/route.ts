@@ -21,5 +21,7 @@ export async function POST() {
   `).bind(crypto.randomUUID(), candidate.id, startedAt).run();
 
   const run = await db.prepare('SELECT * FROM automation_runs WHERE id = ?').bind(candidate.id).first();
-  return Response.json({ run });
+  const approvals = await db.prepare(`SELECT * FROM approval_items
+    WHERE run_id = ? AND status = 'approved' ORDER BY item_type, created_at`).bind(candidate.id).all();
+  return Response.json({ run, approvals: approvals.results });
 }

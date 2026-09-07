@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { defaultConnections, schemaStatements } from './schema';
+import { defaultApprovalItems, defaultConnections, schemaStatements } from './schema';
 
 export type ControlSettings = {
   automation_mode: 'paused' | 'manual' | 'scheduled';
@@ -16,6 +16,9 @@ export type ControlSettings = {
   wellfound_locations: string;
   min_compensation: string;
   application_facts: string;
+  approval_policy: 'review_first' | 'automatic';
+  notify_by_email: number;
+  notification_email: string;
   updated_at: string;
 };
 
@@ -48,6 +51,26 @@ export async function ensureDatabase() {
           connection.detail,
           checkedAt,
           connection.actionUrl,
+        ).run();
+      }
+      for (const item of defaultApprovalItems) {
+        await db.prepare(`
+          INSERT OR IGNORE INTO approval_items
+            (id, item_type, related_id, company, contact_name, target, subject, payload_preview, source_url, readiness, blocker, status, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        `).bind(
+          item.id,
+          item.itemType,
+          item.relatedId,
+          item.company,
+          item.contactName || null,
+          item.target || null,
+          item.subject,
+          item.preview,
+          'sourceUrl' in item ? item.sourceUrl : null,
+          item.readiness,
+          item.blocker || null,
+          '2026-09-01T09:15:00.000Z',
         ).run();
       }
       await db.prepare('PRAGMA optimize').run();

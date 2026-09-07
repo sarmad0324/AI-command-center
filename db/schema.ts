@@ -15,6 +15,9 @@ export const schemaStatements = [
     wellfound_locations TEXT NOT NULL DEFAULT 'Remote only; use the existing saved Wellfound region set shown as Japan +10; company size 1-10 or 11-50; any salary; any equity; no investment-stage restriction',
     min_compensation TEXT NOT NULL DEFAULT '',
     application_facts TEXT NOT NULL DEFAULT 'Sarmad Irfan; Lahore, Pakistan; remote and international; Technical Partner / Product Engineer; final-year university student; React, Next.js, TypeScript, React Native, Expo, Node.js, Express, PostgreSQL, Supabase, Firebase, Docker, GitHub, CI/CD, cloud deployment, APIs, authentication, RBAC, and system architecture; website https://www.sarmadirfan.com/; more than two years of technical ownership on TruckWise. Do not invent years beyond that evidence, compensation expectations, availability, work authorization, degree completion, or any answer not explicitly verified.',
+    approval_policy TEXT NOT NULL DEFAULT 'review_first',
+    notify_by_email INTEGER NOT NULL DEFAULT 1,
+    notification_email TEXT NOT NULL DEFAULT 'sarmad@sarmadirfan.com',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS connection_status (
@@ -90,12 +93,97 @@ export const schemaStatements = [
     occurred_at TEXT NOT NULL,
     FOREIGN KEY (run_id) REFERENCES automation_runs(id)
   )`,
+  `CREATE TABLE IF NOT EXISTS approval_items (
+    id TEXT PRIMARY KEY,
+    item_type TEXT NOT NULL,
+    related_id TEXT NOT NULL,
+    company TEXT NOT NULL,
+    contact_name TEXT,
+    target TEXT,
+    subject TEXT NOT NULL,
+    payload_preview TEXT NOT NULL,
+    source_url TEXT,
+    readiness TEXT NOT NULL DEFAULT 'blocked',
+    blocker TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    decided_by TEXT,
+    run_id TEXT,
+    FOREIGN KEY (run_id) REFERENCES automation_runs(id)
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_automation_runs_requested_at ON automation_runs(requested_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_automation_runs_queue ON automation_runs(status, requested_at)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_applications_created_at ON applications(created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_replies_received_at ON replies(received_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_activity_events_occurred_at ON activity_events(occurred_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_items_queue ON approval_items(status, readiness, created_at)`,
+];
+
+export const defaultApprovalItems = [
+  {
+    id: 'approval-email-20260901-001', itemType: 'email', relatedId: 'lead-20260901-001', company: 'telmi', contactName: 'Véronique Trang', target: 'vero@telmi.io',
+    subject: 'Telmi’s prototype-to-production step', readiness: 'ready', blocker: '',
+    preview: 'Personalized founder email about taking Telmi from a working prototype and pilot schools to a stable Next.js/Supabase production product. Includes Sarmad’s relevant product-ownership experience, a low-friction technical-risk review offer, and a simple opt-out.',
+  },
+  {
+    id: 'approval-email-20260901-002', itemType: 'email', relatedId: 'lead-20260901-002', company: 'Aistetic', contactName: 'Duncan McKay', target: '',
+    subject: 'React Native ownership for ListingFlow', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email about Aistetic’s self-serve ListingFlow journey and React Native mobile build, positioning Sarmad for a low-risk first milestone.',
+  },
+  {
+    id: 'approval-email-20260901-003', itemType: 'email', relatedId: 'lead-20260901-003', company: 'Lamina', contactName: 'Deep Banerjee', target: 'deep.banerjee@getmason.io',
+    subject: 'Product engineering for Lamina’s canvas', readiness: 'blocked', blocker: 'The public recruitment address must be verified as current before sending.',
+    preview: 'Personalized founder email about Lamina’s collaborative canvas, asynchronous generation jobs, integrations, and architecture/delivery risk.',
+  },
+  {
+    id: 'approval-email-20260901-004', itemType: 'email', relatedId: 'lead-20260901-004', company: 'CleverApply', contactName: 'Joseph Pedicini', target: '',
+    subject: 'CleverApply’s Bubble-to-modern-stack migration', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email focused on Bubble-to-React/Node/PostgreSQL migration risks and a concise migration checklist.',
+  },
+  {
+    id: 'approval-email-20260901-005', itemType: 'email', relatedId: 'lead-20260901-005', company: 'Coda', contactName: 'Yuvika Diwan', target: '',
+    subject: 'Technical ownership for Coda’s founding build', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email connecting Coda’s physical-mobility reliability needs with Sarmad’s logistics product ownership.',
+  },
+  {
+    id: 'approval-email-20260901-006', itemType: 'email', relatedId: 'lead-20260901-006', company: 'Open Rewards', contactName: 'Sophia Zheng', target: 'sophia@bludot.io',
+    subject: 'Product ownership across Open Rewards', readiness: 'ready', blocker: '',
+    preview: 'Personalized founder email offering hands-on product ownership across React/Next.js, mobile, APIs, payments, launches, and stabilization. Includes a simple opt-out.',
+  },
+  {
+    id: 'approval-email-20260901-007', itemType: 'email', relatedId: 'lead-20260901-007', company: 'iGrow', contactName: 'Pallavi Bhatt', target: '',
+    subject: 'Technical ownership before iGrow’s next raise', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email offering a compact technical-readiness framework for iGrow’s architecture and fundraising conversations.',
+  },
+  {
+    id: 'approval-email-20260901-008', itemType: 'email', relatedId: 'lead-20260901-008', company: 'Floom', contactName: 'Federico De Ponte', target: '',
+    subject: 'From single Docker to managed cloud', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email about tenant isolation, deployment reliability, authentication, observability, CLI/SDK, and a managed-cloud transition.',
+  },
+  {
+    id: 'approval-email-20260901-009', itemType: 'email', relatedId: 'lead-20260901-009', company: 'Class8', contactName: 'Chris Atkinson', target: '',
+    subject: 'AI-first product delivery for trucking fleets', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email connecting Class8’s trucking platform to Sarmad’s long-term logistics engineering and AI workflow experience.',
+  },
+  {
+    id: 'approval-email-20260901-010', itemType: 'email', relatedId: 'lead-20260901-010', company: 'Mura', contactName: 'Ryan G. Smith', target: '',
+    subject: 'Founding product engineering for Mura', readiness: 'blocked', blocker: 'A verified business email address is still required.',
+    preview: 'Personalized founder email about reliable AI billing automation, operational workflows, systems design, and founding-level product decisions.',
+  },
+  ...[
+    ['001', 'telmi', 'Full Stack Engineer (Next.js / Supabase / AI-Native Workflow)', 'https://wellfound.com/jobs/4079967-full-stack-engineer-next-js-supabase-ai-native-workflow', 'GitHub URL, end-to-end product example, availability, and work authorization must be confirmed.'],
+    ['002', 'Aistetic', 'Founding Product Engineer (React Native)', 'https://wellfound.com/jobs/4491678-founding-product-engineer-react-native', 'Availability, work authorization, GitHub or shipped-app evidence, and exact experience must be confirmed.'],
+    ['003', 'Lamina', 'Frontend Software Engineer — Remote (global)', 'https://wellfound.com/jobs/4589345-frontend-software-engineer-remote-global-full-time-2-5-years', 'Work authorization, availability, exact experience, and any node-editor/WebGL answer must be confirmed.'],
+    ['004', 'Bespoke', 'Full Stack Product Engineer', 'https://wellfound.com/jobs/4461854-full-stack-product-engineer', 'Eastern Time availability, work authorization, exact experience, and compensation expectations must be confirmed.'],
+    ['005', 'Lesto Labs', 'Senior Full-Stack Product Engineer — React Native, Node.js, Next.js', 'https://wellfound.com/jobs/4546260-senior-full-stack-product-engineer-react-native-node-js-next-js', 'A public work sample, exact experience, availability, work authorization, and compensation expectations must be confirmed.'],
+  ].map(([suffix, company, role, sourceUrl, blocker]) => ({
+    id: `approval-application-20260901-${suffix}`,
+    itemType: 'application', relatedId: `app-20260901-${suffix}`, company, contactName: '', target: 'Wellfound',
+    subject: role, sourceUrl, readiness: 'blocked', blocker,
+    preview: `Truthful personalized Wellfound application for ${company}. The prepared cover note is available in the Live Register; submission remains blocked until every required applicant fact is confirmed.`,
+  })),
 ];
 
 export const defaultConnections = [
