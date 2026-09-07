@@ -13,6 +13,12 @@ function text(value: unknown, max = 500) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+function ids(value: unknown) {
+  return Array.isArray(value)
+    ? [...new Set(value.map((item) => text(item, 100)).filter(Boolean))].slice(0, 100)
+    : [];
+}
+
 export async function POST(request: Request) {
   await ensureDatabase();
   const body = await request.json().catch(() => ({})) as RecordInput;
@@ -45,8 +51,25 @@ export async function POST(request: Request) {
     ),
   ];
 
-  statements.push(db.prepare(`UPDATE approval_items SET status = ?
-    WHERE run_id = ? AND status = 'approved'`).bind(status === 'completed' ? 'completed' : 'blocked', runId));
+  const completedApprovalIds = ids(body.completedApprovalIds);
+  const blockedApprovalIds = ids(body.blockedApprovalIds);
+  if (completedApprovalIds.length || blockedApprovalIds.length) {
+    if (completedApprovalIds.length) {
+      statements.push(db.prepare(`UPDATE approval_items SET status = 'completed'
+        WHERE run_id = ? AND status = 'approved'
+        AND id IN (${completedApprovalIds.map(() => '?').join(',')})`)
+        .bind(runId, ...completedApprovalIds));
+    }
+    if (blockedApprovalIds.length) {
+      statements.push(db.prepare(`UPDATE approval_items SET status = 'blocked'
+        WHERE run_id = ? AND status = 'approved'
+        AND id IN (${blockedApprovalIds.map(() => '?').join(',')})`)
+        .bind(runId, ...blockedApprovalIds));
+    }
+  } else {
+    statements.push(db.prepare(`UPDATE approval_items SET status = ?
+      WHERE run_id = ? AND status = 'approved'`).bind(status === 'completed' ? 'completed' : 'blocked', runId));
+  }
 
   const leads = Array.isArray(body.leads) ? body.leads.slice(0, 100) as RecordInput[] : [];
   for (const lead of leads) {
