@@ -21,6 +21,12 @@ export function wordCount(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
+export function karachiDayStartIso(now = new Date()) {
+  const pakistanOffsetMs = 5 * 60 * 60 * 1000;
+  const local = new Date(now.getTime() + pakistanOffsetMs);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - pakistanOffsetMs).toISOString();
+}
+
 export function validateFounderEmail(input: {
   target?: unknown;
   contactName?: unknown;
@@ -57,4 +63,3 @@ export function validateFounderEmail(input: {
   if (/do_not_contact|replied|active_client|active_conversation|bounced/.test(leadStatus)) problems.push('This contact is suppressed by the CRM status.');
   return problems;
 }
-

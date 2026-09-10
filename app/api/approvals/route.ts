@@ -1,5 +1,5 @@
 import { database, ensureDatabase, getSettings } from '@/db';
-import { SALES_POLICY, validateFounderEmail } from '@/lib/sales-policy';
+import { karachiDayStartIso, SALES_POLICY, validateFounderEmail } from '@/lib/sales-policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,14 +87,13 @@ export async function POST(request: Request) {
       return Response.json({ error: `${String(first.item.company)} is not execution-ready: ${first.problems.join(' ')}` }, { status: 409 });
     }
 
-    const dayStart = new Date();
-    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayStart = karachiDayStartIso();
     const usedToday = await db.prepare(`SELECT
       (SELECT COALESCE(SUM(emails_sent + followups_sent), 0) FROM automation_runs WHERE requested_at >= ?) +
         (SELECT COUNT(*) FROM approval_items WHERE item_type = 'email' AND status IN ('approved', 'queued') AND decided_at >= ?) AS emails,
       (SELECT COALESCE(SUM(applications_submitted), 0) FROM automation_runs WHERE requested_at >= ?) +
         (SELECT COUNT(*) FROM approval_items WHERE item_type = 'application' AND status IN ('approved', 'queued') AND decided_at >= ?) AS applications
-    `).bind(dayStart.toISOString(), dayStart.toISOString(), dayStart.toISOString(), dayStart.toISOString()).first<Record<string, number>>();
+    `).bind(dayStart, dayStart, dayStart, dayStart).first<Record<string, number>>();
     const runId = crypto.randomUUID();
     const emailCount = selected.results.filter((item) => item.item_type === 'email').length;
     const applicationCount = selected.results.filter((item) => item.item_type === 'application').length;

@@ -56,7 +56,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [approvalIntent, setApprovalIntent] = useState<'email' | 'application' | null>(null);
+  const [approvalIntent, setApprovalIntent] = useState<'all' | null>(null);
 
   const refresh = useCallback(async (quiet = false) => {
     try {
@@ -71,7 +71,7 @@ export default function Home() {
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
-    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(true); }, 30_000);
+    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(true); }, 10_000);
     const refreshVisible = () => { if (document.visibilityState === 'visible') void refresh(true); };
     window.addEventListener('focus', refreshVisible);
     document.addEventListener('visibilitychange', refreshVisible);
@@ -88,7 +88,7 @@ export default function Home() {
         const detail = payload.missing?.length ? ` Complete: ${payload.missing.join(', ')}.` : '';
         throw new Error(`${payload.error ?? 'The request needs attention.'}${detail}`);
       }
-      setNotice(runType === 'connection_check' ? 'Connection check queued.' : 'Sales run queued. The AI executor will start it automatically.');
+      setNotice(runType === 'connection_check' ? 'Connection check queued.' : 'Daily sales agent queued. The AI executor will start it automatically.');
       setView('Runs'); await refresh(true);
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : 'The request could not be queued.');
@@ -116,6 +116,7 @@ export default function Home() {
 
   function navigate(next: View) { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   const activeCount = number(data?.queue?.queued) + number(data?.queue?.running);
+  const readyApprovalCount = number(data?.approvalMetrics?.ready);
   const policyReady = Boolean(data && data.setupMissing.length === 0);
   const ready = policyReady;
 
@@ -135,12 +136,12 @@ export default function Home() {
       </aside>
 
       <section className="workspace">
-        <header className="topbar"><div className="title-block"><span className="eyebrow">{viewMeta[view].eyebrow}</span><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].description}</p></div><div className="topbar-actions"><span className="live-chip">{data ? `Updated ${relativeTime(data.generatedAt)}` : 'Connecting…'}</span><button className="secondary-ink-button" disabled={!data} onClick={() => navigate('Approvals')} type="button">Review approvals ({number(data?.approvalMetrics?.pending)})</button><button className="primary-button run-button" disabled={busy || !data} onClick={() => void queueRun()} type="button"><span>▶</span>{busy ? 'Queuing…' : 'Prepare daily batch'}</button></div></header>
+        <header className="topbar"><div className="title-block"><span className="eyebrow">{viewMeta[view].eyebrow}</span><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].description}</p></div><div className="topbar-actions"><span className="live-chip">{data ? `Updated ${relativeTime(data.generatedAt)}` : 'Connecting…'}</span><button className="secondary-ink-button" disabled={busy || !data || readyApprovalCount === 0} onClick={() => setApprovalIntent('all')} type="button">✓ Approve, Send &amp; Submit ({readyApprovalCount})</button><button className="primary-button run-button" disabled={busy || !data} onClick={() => void queueRun()} type="button"><span>▶</span>{busy ? 'Queuing…' : 'Run My Daily Sales Agent'}</button></div></header>
         <div className="content">
           {error ? <div className="alert error"><strong>Live data unavailable</strong><span>{error}</span><button onClick={() => void refresh()} type="button">Retry</button></div> : null}
           {notice ? <div className="alert notice"><span>{notice}</span><button onClick={() => setNotice('')} type="button">Dismiss</button></div> : null}
           {!data ? <LoadingState /> : null}
-          {data && view === 'Today' ? <TodayView data={data} onConfigure={() => navigate('Settings')} onApprovals={() => navigate('Approvals')} onRun={() => void queueRun()} busy={busy} /> : null}
+          {data && view === 'Today' ? <TodayView data={data} onConfigure={() => navigate('Settings')} onApprovals={() => navigate('Approvals')} busy={busy} /> : null}
           {data && view === 'Approvals' ? <ApprovalsView data={data} busy={busy} onApprove={setApprovalIntent} /> : null}
           {data && view === 'Sales' ? <SalesView leads={data.leads} /> : null}
           {data && view === 'Applications' ? <ApplicationsView applications={data.applications} /> : null}
@@ -150,12 +151,12 @@ export default function Home() {
           {data && view === 'Settings' ? <SettingsView key={data.settings.updated_at} settings={data.settings} missing={data.setupMissing} onSaved={async () => { setNotice('Automation policy saved.'); await refresh(true); }} /> : null}
         </div>
       </section>
-      {data && approvalIntent ? <ApprovalModal items={data.approvals.filter((item) => item.status === 'pending' && item.readiness === 'ready' && item.item_type === approvalIntent)} scope={approvalIntent} busy={busy} onCancel={() => setApprovalIntent(null)} onConfirm={() => void approveAndRun()} /> : null}
+      {data && approvalIntent ? <ApprovalModal items={data.approvals.filter((item) => item.status === 'pending' && item.readiness === 'ready')} scope={approvalIntent} busy={busy} onCancel={() => setApprovalIntent(null)} onConfirm={() => void approveAndRun()} /> : null}
     </main>
   );
 }
 
-function TodayView({ data, onConfigure, onApprovals, onRun, busy }: { data: DashboardData; onConfigure: () => void; onApprovals: () => void; onRun: () => void; busy: boolean }) {
+function TodayView({ data, onConfigure, onApprovals, busy }: { data: DashboardData; onConfigure: () => void; onApprovals: () => void; busy: boolean }) {
   const policyReady = data.setupMissing.length === 0;
   const executorOnline = data.connections.find((item) => item.id === 'ai-executor')?.status === 'connected';
   const ready = policyReady;
@@ -163,26 +164,26 @@ function TodayView({ data, onConfigure, onApprovals, onRun, busy }: { data: Dash
   return <>
     <section className={`setup-banner ${ready ? 'connected' : ''}`} aria-label="Activation status"><div className="critical-icon">{ready ? '✓' : '!'}</div><div className="critical-copy"><span>{ready ? 'Control plane ready' : 'Activation rules incomplete'}</span><strong>{ready ? `${number(data.approvalMetrics.pending)} items are waiting for your decision.` : `${data.setupMissing.length} operating rule${data.setupMissing.length === 1 ? '' : 's'} still need your input.`}</strong><p>{ready ? `${number(data.approvalMetrics.ready)} can execute now; ${number(data.approvalMetrics.blocked)} are held for missing facts. Worker status: ${executorOnline ? 'checked in' : 'waiting for next scheduled check-in'}.` : `Missing: ${data.setupMissing.join(', ')}.`}</p></div><button className="secondary-button" onClick={ready ? onApprovals : onConfigure} disabled={busy} type="button">{ready ? 'Review approvals' : 'Complete settings'}</button></section>
     <section className="metrics four" aria-label="Current sales snapshot"><Metric label="Qualified prospects" value={number(data.metrics.leads)} note={`${number(data.week.leads)} added this week`} /><Metric label="Replies needing you" value={number(data.metrics.replies)} note={`${number(data.week.replies)} received this week`} /><Metric label="Pending approvals" value={number(data.approvalMetrics.pending)} note={`${number(data.approvalMetrics.ready)} ready now`} /><Metric label="Wellfound applications" value={number(data.metrics.applications)} note={`${number(data.week.applications)} submitted this week`} /></section>
-    <div className="main-grid live-grid"><section className="panel run-control"><PanelHeading eyebrow="AI sales cycle" title="Prepare one reviewable daily batch" note={ready ? 'Policy ready' : 'Waiting for your filters'} /><div className="run-flow">{['Find 10 niche prospects', 'Verify trigger + personal email', 'Draft service-provider outreach', 'Update CRM + Sheet', 'Prepare due email follow-ups', 'Prepare 5 Wellfound applications', 'Stop and notify on reply'].map((step, index) => <div key={step}><b>{index + 1}</b><span>{step}</span></div>)}</div><div className="run-actions"><button className="primary-button" disabled={busy} onClick={onRun} type="button"><span>▶</span>{busy ? 'Queuing…' : 'Prepare daily batch'}</button><span>Nothing is sent until you approve the email or application batch.</span></div></section><section className="panel status-panel"><PanelHeading eyebrow="Latest request" title={latestRun ? humanStatus(latestRun.status) : 'No run yet'} note={latestRun ? formatDate(latestRun.requested_at) : 'Live records only'} />{latestRun ? <RunSummary run={latestRun} /> : <EmptyMini icon="▶" title="Your run history is empty" text="Complete the policy, then prepare the first real batch." />}</section></div>
-    <section className="panel activity-panel"><PanelHeading eyebrow="System activity" title="Recent events" note="Auto-refreshes every 30 seconds and after actions" />{data.activity.length ? <div className="activity-list">{data.activity.map((item) => <div key={item.id}><span className={`event-dot ${item.event_type}`} /><div><strong>{item.label}</strong><p>{item.detail}</p></div><time>{relativeTime(item.occurred_at)}</time></div>)}</div> : <EmptyMini icon="·" title="No activity yet" text="Run requests, connector checks, sends, applications, and replies will appear here." />}</section>
+    <div className="main-grid live-grid"><section className="panel run-control"><PanelHeading eyebrow="AI sales cycle" title="One button prepares the full daily batch" note={ready ? 'Policy ready' : 'Waiting for your filters'} /><div className="run-flow">{['Find up to 10 niche founders', 'Verify trigger + personal email', 'Draft service-provider outreach', 'Update CRM + Sheet', 'Prepare due email follow-ups', 'Prepare 5 Wellfound applications', 'Stop and notify on reply'].map((step, index) => <div key={step}><b>{index + 1}</b><span>{step}</span></div>)}</div><div className="run-actions"><span>Use <strong>Run My Daily Sales Agent</strong> above. Nothing is sent until you approve the ready batch.</span></div></section><section className="panel status-panel"><PanelHeading eyebrow="Latest request" title={latestRun ? humanStatus(latestRun.status) : 'No run yet'} note={latestRun ? formatDate(latestRun.requested_at) : 'Live records only'} />{latestRun ? <RunSummary run={latestRun} /> : <EmptyMini icon="▶" title="Your run history is empty" text="Complete the policy, then prepare the first real batch." />}</section></div>
+    <section className="panel activity-panel"><PanelHeading eyebrow="System activity" title="Recent events" note="Auto-refreshes every 10 seconds and after actions" />{data.activity.length ? <div className="activity-list">{data.activity.map((item) => <div key={item.id}><span className={`event-dot ${item.event_type}`} /><div><strong>{item.label}</strong><p>{item.detail}</p></div><time>{relativeTime(item.occurred_at)}</time></div>)}</div> : <EmptyMini icon="·" title="No activity yet" text="Run requests, connector checks, sends, applications, and replies will appear here." />}</section>
   </>;
 }
 
-function ApprovalsView({ data, busy, onApprove }: { data: DashboardData; busy: boolean; onApprove: (scope: 'email' | 'application') => void }) {
+function ApprovalsView({ data, busy, onApprove }: { data: DashboardData; busy: boolean; onApprove: (scope: 'all') => void }) {
   const pending = data.approvals.filter((item) => item.status === 'pending');
   const readyEmails = pending.filter((item) => item.item_type === 'email' && item.readiness === 'ready').length;
   const readyApplications = pending.filter((item) => item.item_type === 'application' && item.readiness === 'ready').length;
   return <>
     <section className="approval-safety"><span>Approval status</span><strong>{data.settings.approval_policy === 'automatic' ? 'Automatic daily execution is enabled' : 'Review-first mode is active'}</strong><p>A click authorizes only execution-ready items. Missing addresses or applicant facts remain blocked and cannot be sent.</p></section>
-    <section className="approval-toolbar panel"><div><strong>{pending.length} awaiting decision</strong><span>{readyEmails + readyApplications} ready · {pending.length - readyEmails - readyApplications} blocked</span></div><div><button className="primary-button" disabled={busy || readyEmails === 0} onClick={() => onApprove('email')} type="button"><span>✉</span>Approve &amp; send {readyEmails} email{readyEmails === 1 ? '' : 's'}</button><button className="primary-button" disabled={busy || readyApplications === 0} onClick={() => onApprove('application')} type="button"><span>✓</span>Approve &amp; submit {readyApplications} application{readyApplications === 1 ? '' : 's'}</button></div></section>
+    <section className="approval-toolbar panel"><div><strong>{pending.length} awaiting decision</strong><span>{readyEmails + readyApplications} ready · {pending.length - readyEmails - readyApplications} blocked</span></div><div><button className="primary-button" disabled={busy || readyEmails + readyApplications === 0} onClick={() => onApprove('all')} type="button"><span>✓</span>Approve, send &amp; submit {readyEmails + readyApplications} ready</button></div></section>
     <section className="approval-list">{pending.map((item) => <article className={`panel approval-row-card ${item.readiness}`} key={item.id}><div className="approval-row-head"><span>{item.item_type === 'email' ? 'Gmail outreach' : 'Wellfound application'}</span><span className={`readiness-chip ${item.readiness}`}>{item.readiness === 'ready' ? 'Ready to execute' : 'Blocked'}</span></div><h2>{item.subject}</h2><p>{item.contact_name ? `${item.contact_name} · ` : ''}{item.company}</p><div className="approval-context">{item.payload_preview}</div><dl className="approval-details"><div><dt>Destination</dt><dd>{item.target || 'Not verified'}</dd></div><div><dt>Decision</dt><dd>{item.status}</dd></div></dl>{item.blocker ? <div className="blocker-note"><strong>Needs attention</strong><span>{item.blocker}</span></div> : <div className="ready-note">All currently required execution facts are present.</div>}<div className="approval-links">{item.source_url ? <a href={item.source_url} rel="noreferrer" target="_blank">Open role</a> : null}<a href={data.sheetUrl} rel="noreferrer" target="_blank">Open full draft in Sheet</a></div></article>)}</section>
   </>;
 }
 
-function ApprovalModal({ items, scope, busy, onCancel, onConfirm }: { items: ApprovalItem[]; scope: 'email' | 'application'; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
+function ApprovalModal({ items, scope, busy, onCancel, onConfirm }: { items: ApprovalItem[]; scope: 'all'; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
   const emails = items.filter((item) => item.item_type === 'email').length;
   const applications = items.filter((item) => item.item_type === 'application').length;
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onCancel(); }}><section aria-labelledby="approval-title" aria-modal="true" className="modal" role="dialog"><div className="modal-head"><div><span className="eyebrow">Final authorization</span><h2 id="approval-title">Approve and queue this batch?</h2></div><button aria-label="Close" onClick={onCancel} type="button">×</button></div><div className="modal-warning"><strong>This click records your action-time approval.</strong><span>The worker may send the listed emails or submit the listed applications. Blocked items are excluded. Future daily batches still require your approval.</span></div><dl className="modal-facts"><div><dt>Emails</dt><dd>{emails}</dd></div><div><dt>Applications</dt><dd>{applications}</dd></div><div><dt>Scope</dt><dd>{humanStatus(scope)}</dd></div></dl><div className="modal-item-list">{items.map((item) => <div key={item.id}><strong>{item.subject}</strong><span>{item.target || item.company}</span></div>)}</div><div className="modal-actions"><button className="secondary-ink-button" disabled={busy} onClick={onCancel} type="button">Cancel</button><button className="primary-button" disabled={busy || items.length === 0} onClick={onConfirm} type="button"><span>✓</span>{busy ? 'Authorizing…' : 'Approve & queue execution'}</button></div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onCancel(); }}><section aria-labelledby="approval-title" aria-modal="true" className="modal" role="dialog"><div className="modal-head"><div><span className="eyebrow">Final authorization</span><h2 id="approval-title">Send emails and submit applications?</h2></div><button aria-label="Close" onClick={onCancel} type="button">×</button></div><div className="modal-warning"><strong>This click records your action-time approval.</strong><span>The worker will execute every listed ready item. Blocked items are excluded. Future daily batches still require your approval.</span></div><dl className="modal-facts"><div><dt>Emails</dt><dd>{emails}</dd></div><div><dt>Applications</dt><dd>{applications}</dd></div><div><dt>Scope</dt><dd>{humanStatus(scope)}</dd></div></dl><div className="modal-item-list">{items.map((item) => <div key={item.id}><strong>{item.subject}</strong><span>{item.target || item.company}</span></div>)}</div><div className="modal-actions"><button className="secondary-ink-button" disabled={busy} onClick={onCancel} type="button">Cancel</button><button className="primary-button" disabled={busy || items.length === 0} onClick={onConfirm} type="button"><span>✓</span>{busy ? 'Authorizing…' : 'Approve, Send & Submit'}</button></div></section></div>;
 }
 
 function SalesView({ leads }: { leads: Lead[] }) { return <RegisterTable title="Lead register" emptyTitle="No live leads yet" emptyText="The first qualified prospects will appear after an AI worker completes a sales run." headers={['Company', 'Contact', 'Source', 'Score', 'Status', 'Next follow-up']} rows={leads.map((lead) => [lead.company, `${lead.contact_name} · ${lead.title}`, lead.source, lead.qualification_score ?? '—', humanStatus(lead.status), lead.next_followup_at ? formatDate(lead.next_followup_at) : '—'])} />; }
