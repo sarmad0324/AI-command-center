@@ -47,13 +47,19 @@ export async function GET() {
   const now = Date.now();
   const liveConnections = connections.results.map((row) => {
     const connection = row as Record<string, unknown>;
-    if (connection.id !== 'ai-executor') return connection;
     const checkedAt = Date.parse(String(connection.checked_at ?? ''));
-    if (Number.isFinite(checkedAt) && now - checkedAt <= 180_000) return connection;
+    if (Number.isFinite(checkedAt) && now - checkedAt <= 1_800_000) return connection;
+    if (connection.id !== 'ai-executor') {
+      return {
+        ...connection,
+        status: 'needs_check',
+        detail: 'This connection has not been verified during the last 30 minutes. Use the connection check; queued work remains safe.',
+      };
+    }
     return {
       ...connection,
       status: 'offline',
-      detail: 'The AI execution heartbeat has not checked in during the last three minutes. Approved work will remain safely queued until it reconnects.',
+      detail: 'The AI execution worker has not checked in during the last 30 minutes. Approved work remains safely queued until the next check-in.',
     };
   });
 

@@ -1,4 +1,5 @@
 import { database, ensureDatabase } from '@/db';
+import { validateFounderEmail } from '@/lib/sales-policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
   let approvalsAdded = 0;
 
   const leads = Array.isArray(body.leads) ? body.leads.slice(0, 100) as Input[] : [];
+  const incomingLeads = new Map(leads.map((lead) => [text(lead.id, 100), lead]));
   for (const lead of leads) {
     const id = text(lead.id, 100) || crypto.randomUUID();
     const email = text(lead.email, 320).toLowerCase();
@@ -81,11 +83,28 @@ export async function POST(request: Request) {
     const target = text(approval.target, 500);
     const sourceUrl = text(approval.sourceUrl, 1200);
     const explicitlyReady = approval.readiness === 'ready';
+    let policyProblems: string[] = [];
+    if (itemType === 'email') {
+      const incomingLead = incomingLeads.get(relatedId);
+      const storedLead = incomingLead ? null : await db.prepare('SELECT * FROM leads WHERE id = ?').bind(relatedId).first<Record<string, unknown>>();
+      policyProblems = validateFounderEmail({
+        target,
+        contactName: approval.contactName ?? incomingLead?.contactName ?? storedLead?.contact_name,
+        subject: approval.subject,
+        body: approval.payloadPreview,
+        sourceUrl: sourceUrl || incomingLead?.sourceUrl || incomingLead?.triggerUrl || storedLead?.source,
+        qualificationScore: incomingLead?.qualificationScore ?? storedLead?.qualification_score,
+        createdAt: approval.createdAt ?? incomingLead?.createdAt ?? storedLead?.created_at ?? now,
+        lastContactAt: storedLead?.last_contact_at,
+        leadStatus: incomingLead?.status ?? storedLead?.status,
+      });
+      if (approval.verifiedEmail !== true || !validEmail(target)) policyProblems.unshift('The personal email address must be verified by the research worker.');
+    }
     const ready = itemType === 'email'
-      ? explicitlyReady && approval.verifiedEmail === true && validEmail(target)
+      ? explicitlyReady && policyProblems.length === 0
       : explicitlyReady && Boolean(sourceUrl);
-    const blocker = ready ? '' : text(approval.blocker, 1000) || (itemType === 'email'
-      ? 'A verified deliverable email address is required.'
+    const blocker = ready ? '' : policyProblems.join(' ') || text(approval.blocker, 1000) || (itemType === 'email'
+      ? 'A verified personal decision-maker email and complete service-outreach draft are required.'
       : 'The application is missing a live role URL or a verified applicant fact.');
     statements.push(db.prepare(`INSERT INTO approval_items
       (id, item_type, related_id, company, contact_name, target, subject, payload_preview, source_url, readiness, blocker, status, created_at)

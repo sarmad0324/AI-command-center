@@ -55,7 +55,7 @@ button { font: inherit; }
 .topbar { min-height: 98px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 34px; border-bottom: 1px solid var(--line); background: rgba(255,254,249,.76); }
 .eyebrow { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .topbar h1 { margin: 4px 0 0; font-family: Georgia, serif; font-size: clamp(26px, 3vw, 37px); font-weight: 500; letter-spacing: -.025em; }
-.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.topbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
 .demo-chip { padding: 7px 10px; border: 1px solid #d7c692; border-radius: 99px; color: #6b5721; background: #fbf5df; font-size: 10px; font-weight: 700; }
 .icon-button { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 9px; color: var(--green); background: var(--surface); font-size: 11px; font-weight: 800; cursor: pointer; }
 .primary-button, .secondary-button { border: 0; border-radius: 9px; cursor: pointer; font-weight: 750; text-decoration: none; }
@@ -397,6 +397,7 @@ button { font: inherit; }
 .connection-status.connected { color: var(--green); background: var(--green-soft); }
 .connection-status.blocked { color: #8c3f28; background: var(--orange-soft); }
 .connection-status.offline, .connection-status.error, .connection-status.disconnected, .connection-status.expired { color: #8c3f28; background: var(--orange-soft); }
+.connection-status.needs_check { color: #765815; background: var(--yellow-soft); }
 .connection-card h2 { margin: 18px 0 3px; font-family: Georgia, serif; font-size: 22px; font-weight: 500; }
 .connection-card > strong { color: var(--muted); font-size: 9px; }
 .connection-card > p { margin: 14px 0 18px; color: #4d5751; font-size: 9px; line-height: 1.55; }
